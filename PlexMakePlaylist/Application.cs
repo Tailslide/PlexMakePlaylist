@@ -38,7 +38,7 @@ namespace PlexMakePlaylist
             var servername = _config["plexServer"];
             if (key == null) _logger.LogError("Please specify plexToken in config.json");
             else if (servername == null) _logger.LogError("Please specify plexServer in config.json");
-            else MyServer = services.ConnectToPlexServer(key, servername, false);
+            else MyServer = services.ConnectToPlexServer(key, servername);
         }
         public async Task MakePlayList()
         {

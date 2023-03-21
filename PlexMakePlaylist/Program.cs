@@ -91,30 +91,4 @@ internal class Program
         return services.BuildServiceProvider();
     }
 
-    //private static void Main(string[] args)
-    //{
-    //    Console.WriteLine("Hello, World!");
-
-    //    // Create Client Options
-    //    var apiOptions = new ClientOptions
-    //    {
-    //        Product = "PlexMakePlaylist",
-    //        DeviceName = "API_UnitTests",
-    //        ClientId = "MakeSurroundMusicPlaylist",
-    //        Platform = "Web",
-    //        Version = "v1"
-    //    };
-
-    //    // Setup Dependency Injection
-    //    var services = new ServiceCollection();
-    //    services.AddSingleton(apiOptions);
-    //    services.AddTransient<IPlexServerClient, PlexServerClient>();
-    //    services.AddTransient<IPlexAccountClient, PlexAccountClient>();
-    //    services.AddTransient<IPlexLibraryClient, PlexLibraryClient>();
-    //    services.AddTransient<IApiService, ApiService>();
-    //    services.AddTransient<IPlexFactory, PlexFactory>();
-    //    services.AddTransient<IPlexRequestsHttpClient, PlexRequestsHttpClient>();
-
-    //    this.ServiceProvider = services.BuildServiceProvider();
-    //}
 }

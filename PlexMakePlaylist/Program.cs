@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging.Configuration;
 using Plex.Api.Factories;
 using Plex.Library.Factories;
 using Plex.ServerApi;
@@ -11,6 +12,8 @@ using Plex.ServerApi.Clients;
 using Plex.ServerApi.Clients.Interfaces;
 using Plex.ServerApi.PlexModels.Account;
 using PlexMakePlaylist;
+using System.Diagnostics;
+using System;
 using System.Net.Http;
 
 internal class Program
@@ -19,47 +22,22 @@ internal class Program
     //async Task Main feature allowed from C# 7.1+
     public static async Task Main(string[] args)
     {
-        //Composition root
         IServiceProvider services = ConfigureServices();
-        ILogger logger = NullLogger.Instance;
-
-        IHttpClientFactory clientFactory = services.GetRequiredService<IHttpClientFactory>();
-        HttpClient client = clientFactory.CreateClient();
-
-        IConfiguration configuration = services.GetRequiredService<IConfiguration>();
-
         var app = new Application(services);
         if (app.MyServer != null) await app.MakePlayList();
-        //await RunAsync(logger, client, configuration);
-    }
-
-    private static async Task RunAsync(ILogger log, HttpClient client, IConfiguration configuration)
-    {
-
-        //...
-        //Console.WriteLine("Hello, World!");
-        //var plexFactory = Services.GetService<IPlexFactory>();
-
-        //// Signin with Username, Password
-        //PlexAccount account = plexFactory
-        //    .GetPlexAccount("username", "password");
-
-        //// or use and Plex Auth token
-        //PlexAccount account = plexFactory
-        //    .GetPlexAccount("access_token_here");
-
     }
 
     public static IServiceProvider ConfigureServices()
     {
+        // Setup Dependency Injection
         IServiceCollection services = new ServiceCollection();
-        services.AddHttpClient();
 
         IConfigurationRoot configuration = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("config.json", optional: true, reloadOnChange: true)
             .Build();
-        services.AddSingleton<IConfigurationRoot>(configuration);
+
+        //services.AddSingleton<IConfigurationRoot>(configuration);
         services.AddSingleton<IConfiguration>(configuration);
 
         // Create Client Options
@@ -72,9 +50,6 @@ internal class Program
             Version = "v1"
         };
 
-
-        // Setup Dependency Injection
-        //var services = new ServiceCollection();
         services.AddSingleton(apiOptions);
         services.AddTransient<IPlexServerClient, PlexServerClient>();
         services.AddTransient<IPlexAccountClient, PlexAccountClient>();
@@ -82,13 +57,21 @@ internal class Program
         services.AddTransient<IApiService, ApiService>();
         services.AddTransient<IPlexFactory, PlexFactory>();
         services.AddTransient<IPlexRequestsHttpClient, PlexRequestsHttpClient>();
-        services.AddLogging(configure => configure.AddSimpleConsole(options=>
-        {
-            options.IncludeScopes = true;
-            options.SingleLine = true;
-            options.TimestampFormat = "HH:mm:ss ";
-        }));
-        return services.BuildServiceProvider();
+        services.AddLogging(configure => configure
+            .AddSimpleConsole(options =>
+            {
+                options.IncludeScopes = true;
+                options.SingleLine = true;
+                options.TimestampFormat = "HH:mm:ss ";
+            })
+            .AddFilter((provider, category, logLevel) =>
+            {
+                return (category != "Plex.ServerApi.Api.ApiService" || logLevel > LogLevel.Information);
+            })
+            .SetMinimumLevel(LogLevel.Information)            
+        );
+        
+        return services.BuildServiceProvider();        
     }
 
 }

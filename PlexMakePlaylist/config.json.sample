@@ -1,4 +1,5 @@
 {
   "plexToken": "myplexkeygoeshere",
-  "plexServer": "MYNAS"
+  "plexServer": "MYNAS",
+  "plexSurroundPlaylist":  "Multichannel Tracks"
 }

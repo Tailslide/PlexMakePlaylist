@@ -3,15 +3,19 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Plex.Api.Factories;
 using Plex.Library.ApiModels.Accounts;
+using Plex.Library.ApiModels.Libraries;
 using Plex.Library.ApiModels.Servers;
 using Plex.ServerApi.Clients.Interfaces;
+using Plex.ServerApi.PlexModels.Folders;
+using Plex.ServerApi.PlexModels.Library.Search;
+using Plex.ServerApi.PlexModels.Library;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
-
+using System.Diagnostics;
 
 namespace PlexMakePlaylist
 {
@@ -42,16 +46,78 @@ namespace PlexMakePlaylist
         }
         public async Task MakePlayList()
         {
-            if (MyServer == null) throw new Exception("Not logged into server");
+            using (_logger.BeginScope("MakePlayList()"))
+            {
+                if (MyServer == null) throw new Exception("Not logged into server");
 
-            _logger.LogInformation("Finding My plex Server");
-            //var servers = account.Servers().Result;
-            //var myServer = servers.Where(c => c.Owned == 1).First();
-            // Get Home OnDeck items
-            //var plexFactory = Services.GetService<IPlexFactory>();
+                var libraries = await MyServer.Libraries();
+                var foundLibrary = libraries.FirstOrDefault(x => x.Scanner == "Plex Music");
+                if (foundLibrary == null) throw new Exception("No Music Library Found on Server");
+                var musicLibrary = (Plex.Library.ApiModels.Libraries.MusicLibrary)foundLibrary;
+                var playlists = await MyServer.Playlists();
 
-            var onDeckItems = MyServer.HomeOnDeck().Result;
+                var listName = _config["plexSurroundPlaylist"];
+                if (listName == null) _logger.LogError("Please specify plexSurroundPlaylist in config.json");
+                else
+                {
+                    var surroundList = playlists.Metadata.FirstOrDefault(x => x.Title.Trim().ToUpper() == listName.ToUpper().Trim());
 
+                    int limit = 999999;
+
+                    //var items = await musicLibrary.AllArtists("artist.title:asc", 0, 9999999);
+                    //var allArtists = items.Media;
+                    //_logger.LogInformation($"Found {allArtists.Count()} artists");
+                    //var albumitems = await musicLibrary.AllAlbums("", 0, limit);
+                    //var allAlbums = albumitems.Media;
+                    //_logger.LogInformation($"Found {allAlbums.Count()} albums");
+                    var trackitems = await musicLibrary.AllTracks("", 0, limit);
+                    var allTracks = trackitems.Media;
+                    _logger.LogInformation($"Found {allTracks.Count()} tracks");
+                    Thread.Sleep(100);  // give logs a chance to flush - can't for the life of me force them to dispose
+
+                    var surroundTracks = allTracks.Where(x => x.Media.Any(x => x.AudioChannels > 2));
+                    _logger.LogInformation($"Found {surroundTracks.Count()} surround tracks");
+                    foreach (var track in surroundTracks)
+                    {
+                        _logger.LogInformation($"Adding Track {track.GrandparentTitle} - {track.ParentTitle} - {track.Title}  to playlist {listName}");
+                        await MyServer.AddPlaylistItems(surroundList, new List<string>() { track.RatingKey });
+                    }
+                    //foreach (var artist in allArtists.Where(x => allAlbums.Any(y => (y.ParentGuid == x.Guid) && surroundTracks.Any(z => z.ParentGuid == y.Guid))))
+
+                        // sample code to loop all artists albums and tracks
+                        //foreach (var artist in allArtists)
+                        //{
+                        //    string Title = artist.Title;
+                        //    _logger.LogInformation($"{artist.Title}");
+
+                        //    //var hasparent = new List<FilterRequest> { new() {Field = "artist.title", Operator = Operator.Is, Values = new List<string> { "3rd Bass" }}};
+                        //    //var albums = await musicLibrary.SearchAlbums(string.Empty, string.Empty, hasparent, 0, 10);
+                        //    var artistAlbums = allAlbums.Where(x => x.ParentGuid == artist.Guid);
+                        //    foreach (var album in artistAlbums)
+                        //    {
+                        //        _logger.LogInformation($"\tAlbum {album.Title}");
+                        //        var albumTracks = allTracks.Where(x => x.ParentGuid == album.Guid);
+                        //        foreach (var track in albumTracks)
+                        //        {
+                        //            _logger.LogInformation($"\t\tTrack {track.Title}");
+                        //            //foreach (var media in track.Media)
+                        //            //{
+                        //            //    _logger.LogInformation($"\t\t\tChannels: {media.AudioChannels}");
+
+                        //            //    if (media.AudioChannels > 2)
+                        //            //    {
+                        //            //        _logger.LogInformation($"\t\t\t*** ^^^^ multichannel ^^^ ***");
+                        //            //    }
+                        //            //}
+                        //            if (track.Media.Any(x=>x.AudioChannels > 2))
+                        //                await MyServer.AddPlaylistItems(surroundList, new List<string>() { track.RatingKey });
+                        //        }
+                        //    }
+                        //}
+                }
+            }
+            Thread.Sleep(1500); // give logs a chance to flush - can't for the life of me force them to dispose
         }
     }
 }
+

@@ -29,7 +29,7 @@ internal class Program
         IConfiguration configuration = services.GetRequiredService<IConfiguration>();
 
         var app = new Application(services);
-        await app.MakePlayList();
+        if (app.MyServer != null) await app.MakePlayList();
         //await RunAsync(logger, client, configuration);
     }
 

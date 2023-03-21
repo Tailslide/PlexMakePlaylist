@@ -10,6 +10,7 @@ using Plex.ServerApi.Api;
 using Plex.ServerApi.Clients;
 using Plex.ServerApi.Clients.Interfaces;
 using Plex.ServerApi.PlexModels.Account;
+using PlexMakePlaylist;
 using System.Net.Http;
 
 internal class Program
@@ -27,15 +28,25 @@ internal class Program
 
         IConfiguration configuration = services.GetRequiredService<IConfiguration>();
 
-        await RunAsync(logger, client, configuration);
+        var app = new Application(services);
+        await app.MakePlayList();
+        //await RunAsync(logger, client, configuration);
     }
 
     private static async Task RunAsync(ILogger log, HttpClient client, IConfiguration configuration)
     {
 
         //...
-        Console.WriteLine("Hello, World!");
+        //Console.WriteLine("Hello, World!");
+        //var plexFactory = Services.GetService<IPlexFactory>();
 
+        //// Signin with Username, Password
+        //PlexAccount account = plexFactory
+        //    .GetPlexAccount("username", "password");
+
+        //// or use and Plex Auth token
+        //PlexAccount account = plexFactory
+        //    .GetPlexAccount("access_token_here");
 
     }
 
@@ -45,8 +56,8 @@ internal class Program
         services.AddHttpClient();
 
         IConfigurationRoot configuration = new ConfigurationBuilder()
-            .SetBasePath(Directory.GetParent(AppContext.BaseDirectory).FullName)
-            .AddJsonFile("config.json", false)
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("config.json", optional: true, reloadOnChange: true)
             .Build();
         services.AddSingleton<IConfigurationRoot>(configuration);
         services.AddSingleton<IConfiguration>(configuration);
@@ -71,7 +82,12 @@ internal class Program
         services.AddTransient<IApiService, ApiService>();
         services.AddTransient<IPlexFactory, PlexFactory>();
         services.AddTransient<IPlexRequestsHttpClient, PlexRequestsHttpClient>();
-
+        services.AddLogging(configure => configure.AddSimpleConsole(options=>
+        {
+            options.IncludeScopes = true;
+            options.SingleLine = true;
+            options.TimestampFormat = "HH:mm:ss ";
+        }));
         return services.BuildServiceProvider();
     }
 

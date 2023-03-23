@@ -9,6 +9,7 @@ Rename ```config.json.sample``` to ```config.json``` and update with your key:
 {
   "plexToken": "myplexkey",
   "plexServer": "myplexservername"
-  "plexSurroundPlaylist":  "playlistname"
+  "plexSurroundPlaylist":  "playlistname",
+  "plexLarge1080pMoviesPlaylist": "largemovieplaylistname"
 }
 ```

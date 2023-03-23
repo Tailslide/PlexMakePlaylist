@@ -1,5 +1,6 @@
 {
   "plexToken": "myplexkeygoeshere",
   "plexServer": "MYNAS",
-  "plexSurroundPlaylist":  "Multichannel Tracks"
+  "plexSurroundPlaylist": "Multichannel Tracks",
+  "plexLarge1080pMoviesPlaylist": "largemovieplaylistname"
 }

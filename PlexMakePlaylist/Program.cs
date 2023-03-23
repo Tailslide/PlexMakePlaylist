@@ -24,7 +24,7 @@ internal class Program
     {
         IServiceProvider services = ConfigureServices();
         var app = new Application(services);
-        if (app.MyServer != null) await app.MakePlayList();
+        if (app.MyServer != null) await app.MakePlaylists();
     }
 
     public static IServiceProvider ConfigureServices()

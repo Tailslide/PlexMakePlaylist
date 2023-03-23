@@ -44,9 +44,61 @@ namespace PlexMakePlaylist
             else if (servername == null) _logger.LogError("Please specify plexServer in config.json");
             else MyServer = services.ConnectToPlexServer(key, servername);
         }
-        public async Task MakePlayList()
+
+        public async Task MakePlaylists()
         {
-            using (_logger.BeginScope("MakePlayList()"))
+            // could run these in parallel?
+            await MakeMoviePlaylist();
+            await MakeMusicPlaylist();
+        }
+
+        public async Task MakeMoviePlaylist()
+        {
+            using (_logger.BeginScope("MakeMoviePlayList()"))
+            {
+                if (MyServer == null) throw new Exception("Not logged into server");
+
+                var libraries = await MyServer.Libraries();
+                var foundLibrary = libraries.FirstOrDefault(x => x.Scanner == "Plex Movie");
+                if (foundLibrary == null) throw new Exception("No Movie Library Found on Server");
+                var movieLibrary = (Plex.Library.ApiModels.Libraries.MovieLibrary)foundLibrary;
+                var playlists = await MyServer.Playlists();
+
+                var listName = _config["plexLarge1080pMoviesPlaylist"];
+                if (listName == null) _logger.LogError("Please specify plexLargeMoviesPlaylist in config.json");
+                else
+                {
+                    var bigMovieList = playlists.Metadata.FirstOrDefault(x => x.Title.Trim().ToUpper() == listName.ToUpper().Trim());
+                    int limit = 999999;
+
+                    var movies = await movieLibrary.AllMovies("", 0, limit);
+                    var media = movies.Media;
+                    _logger.LogInformation($"Found {media.Count()} movies");
+                    Thread.Sleep(100);  // give logs a chance to flush - can't for the life of me force them to dispose
+
+                    // find movies bigger than 20gb
+                    //var surroundTracks = media.Where(x => x.Media.Any(x => x.Part.Sum(y=>y.Size) > 21474836480));
+                    for (int x = 0; x < media.Count(); x++)
+                    {
+                        var bigMovies2 = media.Take(x).OrderByDescending(x => x.Media.Max(y => y.Part.Sum(z => z.Size)));
+                    }
+                    // count only 1080p non 3d movies
+                    var bigMovies = media.Where(x=>x.Media != null && x.Media.Any(y=>y.VideoResolution == "1080"))
+                        .OrderByDescending(x => x.Media.Where(q=>q.VideoResolution == "1080").Max(y=> y.Part.Sum(z=>z.File.Contains("3D") ? 0 : z.Size)));
+                    foreach (var movie in bigMovies.Take(10)) // add ten biggest media
+                    {
+                        _logger.LogInformation($"Adding movie {movie.Title} to playlist {listName}");
+                        await MyServer.AddPlaylistItems(bigMovieList, new List<string>() { movie.RatingKey });
+                    }
+                }
+            }
+            Thread.Sleep(1500); // give logs a chance to flush - can't for the life of me force them to dispose
+        }
+
+
+        public async Task MakeMusicPlaylist()
+        {
+            using (_logger.BeginScope("MakeMusicPlayList()"))
             {
                 if (MyServer == null) throw new Exception("Not logged into server");
 
